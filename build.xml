@@ -1,0 +1,267 @@
+<!-- Main build file for Nina -->
+
+	<project name="Nina" default="compile" basedir=".">		
+
+	<property name="src" location="src" />
+	<property name="build" location="classes" />
+	<property name="nclib-build" location="lib" />
+	<property name="dist" location="dist" />
+	<property name="bin" location="bin" />
+	<property name="lib" location="lib" />
+	<property name="config" location="config" />
+	<property name="log" location="log" />
+	<property name="log-nodes" location="log/nodes" />
+	
+	<property name="version" value="0.1.5" />
+		
+	<property name="Nina-jar" value="Nina-${version}.jar" />
+	<property name="Nina-lib-jar" value="libNina-${version}.jar" />
+	<property name="Nina-tar" value="${dist}/Nina-${version}.tar.gz" />
+	<property name="Nina-src-tar" value="${dist}/Nina-src-${version}.tar.gz" />
+	<property name="Nina.config" value="config/Nina.cfg" />
+	
+	<property name="HSH.config" value="config/HSH.cfg" />
+	<property name="java.util.logging.config.file" value="config/log.config" />
+			
+	<path id="classpath">
+		<pathelement location="${lib}/util-prp.jar" />
+		<pathelement location="${lib}/jpcap.jar" />
+		<pathelement location="${lib}/asyncj.jar" />
+		<pathelement location="${lib}/xmlrpc-2.0-a1-dev.jar" />
+		<pathelement location="${lib}/commons-codec-1.2.jar" />
+
+		<!-- <pathelement location="${lib}/jb2refscan-2.58.jar"/> -->
+	  <pathelement path="${java.class.path}/" />	
+	</path>
+	
+<!-- Build targets -->
+	
+	<target name="init">
+		<!-- Create the time stamp -->
+		<tstamp />
+		<!-- Create the build directory structure used by compile -->
+		<mkdir dir="${build}" />
+		<mkdir dir="${log-nodes}" />
+	</target>
+
+	<target name="compile" depends="init" description="Compile the source.">
+		<!-- Compile the java code from ${src} into ${build} -->
+		<javac debug="on" srcdir="${src}" destdir="${build}" classpathref="classpath"/>
+	</target>
+	
+	
+	<target name="jar" depends="compile" description="Create the distribution jar file.">
+  	<mkdir dir="${dist}" />
+	    <jar destfile="${dist}/${Nina-jar}">
+	      <zipfileset dir="${build}"/> 
+	    	
+	    </jar>
+	</target>
+
+	<target name="libjar" depends="compile" description="Create the NC library jar file.">
+  	<mkdir dir="${dist}" />
+	    <jar destfile="${dist}/${Nina-lib-jar}">
+	      <zipfileset dir="${nclib-build}"/>
+	    </jar>
+	</target>
+
+	
+	<target name="tarball" depends="jar" description="Create a tarball with all the files to run an Nina node.">
+		<tar destfile="${Nina-tar}" compression="gzip" excludes="*">
+			<tarfileset dir="." mode="755">
+				<include name="runNina.sh" />
+
+			</tarfileset>
+			<tarfileset dir=".">
+  			<include name="build.xml" />
+				<include name="dist/*.jar" />
+				<include name="lib/*.jar" />
+				<include name="lib/*.so" />
+				<include name="bin/**" />
+				<include name="config/**" />
+			</tarfileset>
+		</tar>
+	</target>
+	
+	<target name="tarball-src" description="Create a tarball with all the files and source code.">
+		<tar destfile="${Nina-src-tar}" compression="gzip" excludes="*">
+			<tarfileset dir="." mode="755">
+				<include name="runNina.sh" />
+
+			</tarfileset>
+			<tarfileset dir=".">
+				<include name="build.xml" />
+				<include name="lib/**" />
+				<include name="config/**" />
+				<include name="src/**/" />
+			</tarfileset>
+		</tar>
+	</target>
+			
+<!-- Run targets -->
+	
+	<target name="run-Nina" depends="compile" description="Execute Nina from classes.">
+		<java classname="edu.NUDT.pdl.Nina.Ninaloader" fork="true" maxmemory="256m">
+			<classpath refid="classpath"/>
+			<classpath>
+				<pathelement location="${build}"/>
+			</classpath>
+			<jvmarg value="-ea"/>
+			<sysproperty key="java.library.path" value="lib" />
+			<sysproperty key="Nina.config" value="${Nina.config}" />
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+			
+		</java>
+	</target>
+	
+		<target name="run-LogServer" depends="compile" description="Execute Nina from classes.">
+		<java classname="edu.NUDT.pdl.Nina.CoordinateLogServer" fork="true" maxmemory="256m">
+			<classpath refid="classpath"/>
+			<classpath>
+				<pathelement location="${build}"/>
+			</classpath>
+			<jvmarg value="-ea"/>
+			<sysproperty key="java.library.path" value="lib" />
+			<sysproperty key="Nina.config" value="${Nina.config}" />
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+			
+		</java>
+	</target>
+
+
+	
+	<target name="run-HSH" depends="compile" description="Execute HSH from classes.">
+		<java classname="edu.NUDT.pdl.Nina.NCManage.HSH_loader" fork="true" maxmemory="256m">
+			<classpath refid="classpath"/>
+			<classpath>
+				<pathelement location="${build}"/>
+			</classpath>
+			<jvmarg value="-ea"/>
+			<sysproperty key="java.library.path" value="lib" />
+			<sysproperty key="HSH.config" value="${HSH.config}" />
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+			
+		</java>
+	</target>
+
+
+
+	<target name="run-ServerRPC" depends="compile" description="Execute XMLRPC from classes.">
+		<java classname="edu.NUDT.pdl.Nina.RPCTest.ApacheXMLRPC" fork="true" maxmemory="256m">
+			<classpath refid="classpath"/>
+			<classpath>
+				<pathelement location="${build}"/>
+			</classpath>
+			<jvmarg value="-ea"/>
+			<jvmarg value="-verbose:gc" />
+			<jvmarg value="-Xrunhprof:heap=all,file=java-hprof=${env.HOSTNAME}.txt" />
+
+			<sysproperty key="java.library.path" value="lib" />			
+		</java>
+	</target>
+
+		<target name="run-ClientRPC" depends="compile" description="Execute XMLRPC from classes.">
+		<java classname="edu.NUDT.pdl.Nina.RPCTest.ClientXMLRPC" fork="true" maxmemory="256m">
+			<classpath refid="classpath"/>
+			<classpath>
+				<pathelement location="${build}"/>
+			</classpath>
+			<jvmarg value="-ea"/>
+			<jvmarg value="-verbose:gc" />
+			<jvmarg value="-Xrunhprof:heap=all,file=java-hprof=${env.HOSTNAME}.txt" />
+
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+			
+		</java>
+	</target>
+
+
+		<target name="run-APICall" depends="compile" description="Execute XMLRPC from classes.">
+		<java classname="edu.NUDT.pdl.Nina.APICaller" fork="true" maxmemory="256m">
+			<classpath refid="classpath"/>
+			<classpath>
+				<pathelement location="${build}"/>
+			</classpath>
+			<jvmarg value="-ea"/>
+			<jvmarg value="-verbose:gc" />
+			<jvmarg value="-Xrunhprof:heap=all,file=java-hprof=${env.HOSTNAME}.txt" />
+
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+			
+		</java>
+	</target>
+
+
+	<target name="test_addr" depends="compile" description="Execute HSH from classes.">
+		<java classname="edu.NUDT.pdl.Nina.NCManage.HSH_Manager" fork="true" maxmemory="256m">
+			<classpath refid="classpath"/>
+			<classpath>
+				<pathelement location="${build}"/>
+			</classpath>
+			<jvmarg value="-ea"/>
+			<sysproperty key="java.library.path" value="lib" />
+			<sysproperty key="HSH.config" value="${HSH.config}" />
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+			
+		</java>
+	</target>	
+	
+
+	<target name="run-Nina-jar" description="Execute Nina from the jar file.">		
+	  <java classname="edu.NUDT.pdl.Nina.Ninaloader" fork="true" maxmemory="256m">
+	    <classpath>
+		    <pathelement location="${dist}/${Nina-jar}"/>
+		  </classpath>
+			<jvmarg value="-ea"/>  <!-- Turn on assertions -->
+	  	<!-- <jvmarg value="-Xloggc:"/> -->
+			<sysproperty key="java.library.path" value="lib" />
+			<sysproperty key="Nina.config" value="${Nina.config}" />
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+	  </java>
+	</target>	
+		
+	<target name="run-Nina-jar-profile" description="Execute Nina from the jar file with profiling support.">		
+		  <java classname="edu.harvard.syrah.Nina.Nina" fork="true" maxmemory="256m">
+		<sysproperty key="java.library.path" value="/data/jprofiler5/bin/linux-x86"/>
+		    <classpath>
+			    <pathelement location="${dist}/${Nina-jar}"/>
+			  </classpath>
+				<jvmarg value="-ea"/>  <!-- Turn on assertions -->
+		  	<!-- <jvmarg value="-Xloggc:"/> -->
+
+			<jvmarg value="-Xbootclasspath/a:/data/jprofiler5/bin/agent.jar"/>
+		  	<jvmarg value="-agentlib:jprofilerti=port=8849"/>
+		  	<!-- <jvmarg value="-Xrunjprofiler"/> -->
+			<!-- <jvmarg value="-verbose:gc"/> -->
+				<sysproperty key="Nina.config" value="${Nina.config}" />
+				<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+		  </java>
+		</target>	
+		
+	<target name="run-Nina-jar-debug" description="Execute Nina from the jar file with heap debugging.">		
+	  <java classname="edu.NUDT.pdl.Nina.Ninaloader" fork="true" maxmemory="128m">
+	    <classpath>
+		    <pathelement location="${dist}/${Nina-jar}"/>
+		    <pathelement location="${lib}/util-prp.jar"/>
+				<pathelement location="${lib}/jb2refscan-2.58.jar"/>
+		  </classpath>
+	    <classpath refid="classpath"/>
+			<jvmarg value="-ea"/> <!-- Turn on assertions -->
+	  	<!-- <jvmarg value="-Xloggc:"/> -->
+			<jvmarg value="-verbose:gc" />
+			<jvmarg value="-Xrunhprof:heap=all,file=java-hprof=${env.HOSTNAME}.txt" />
+			<sysproperty key="Nina.config" value="${py					replyMsg.setMsgId(reqMsg.getMsgId());					
+xida.config}" />
+			<sysproperty key="java.util.logging.config.file" value="${java.util.logging.config.file}" />
+	  </java>
+	</target>	
+		
+	
+<!-- Clean targets -->
+	
+	<target name="clean" description="Clean build and dist directory.">
+		<!-- Delete the ${build} directory trees -->
+		<delete dir="${build}" />
+	</target>
+
+</project>
